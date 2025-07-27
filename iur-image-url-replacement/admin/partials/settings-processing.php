@@ -38,16 +38,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['iur_processing_settin
     echo '<div class="notice notice-success is-dismissible"><p>' . __('Settings saved successfully!', 'iur') . '</p></div>';
 }
 ?>
-<div class="iur-stats">
-    <ul>
-        <li><strong><?php _e('Total Posts:', 'iur'); ?></strong> <?php echo esc_html($stats['total']); ?></li>
-        <li><strong><?php _e('Processed:', 'iur'); ?></strong> <?php echo esc_html($stats['success']); ?></li>
-        <li><strong><?php _e('Errors:', 'iur'); ?></strong> <?php echo esc_html($stats['errors']); ?></li>
-        <li><strong><?php _e('Pending:', 'iur'); ?></strong> <?php echo esc_html($stats['pending']); ?></li>
-        <li><strong><?php _e('Success Rate:', 'iur'); ?></strong> <?php echo esc_html($stats['percent']); ?>%</li>
-    </ul>
-</div>
-
 
 <form method="post" action="<?php echo admin_url('admin-post.php'); ?>">
     <input type="hidden" name="action" value="iur_save_processing_settings">
