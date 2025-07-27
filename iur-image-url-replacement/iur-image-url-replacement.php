@@ -9,345 +9,250 @@
 
 defined('ABSPATH') || exit;
 
-// فعال کردن گزارش خطاها
+define('IUR_PLUGIN_FILE', __FILE__);
+define('IUR_PLUGIN_DIR', plugin_dir_path(__FILE__));
+define('IUR_PLUGIN_URL', plugin_dir_url(__FILE__));
+define('IUR_VERSION', '2.0.1');
+define('IUR_LOG_FILE', WP_CONTENT_DIR . '/iur-debug.log');
+
+// Check log file permissions and create if needed
+if (!file_exists(IUR_LOG_FILE)) {
+    @touch(IUR_LOG_FILE);
+    @chmod(IUR_LOG_FILE, 0644);
+}
+
+if (file_exists(IUR_LOG_FILE) && !is_writable(IUR_LOG_FILE)) {
+    // We cannot add admin notice here because it's too early, so we'll handle it later
+}
+
+// Enable error reporting in development
 if (defined('WP_DEBUG') && WP_DEBUG) {
     error_reporting(E_ALL);
     ini_set('display_errors', 1);
 }
 
-define('IUR_PLUGIN_DIR', plugin_dir_path(__FILE__));
-define('IUR_PLUGIN_URL', plugin_dir_url(__FILE__));
+// Load dependencies
+require_once IUR_PLUGIN_DIR . 'includes/class-iur-autoloader.php';
 
-// فعال‌سازی افزونه
+require_once IUR_PLUGIN_DIR . 'includes/vendor/autoload.php';
+
+// تست وجود کلاس Cloudinary
+if (class_exists('Cloudinary\Cloudinary')) {
+    error_log('Cloudinary SDK به درستی بارگذاری شد!');
+} else {
+    error_log('خطا: Cloudinary SDK بارگذاری نشد!');
+}
+
+// Activation hook
 register_activation_hook(__FILE__, 'iur_activate_plugin');
 function iur_activate_plugin() {
-    if (!current_user_can('activate_plugins')) return;
-    
-    add_option('iur_settings', [
-        'freeimage_api_key' => '',
-        'imgbb_api_key' => '',
-        'auto_replace' => 'no',
-        'post_types' => ['post', 'product'],
+    if (!current_user_can('activate_plugins')) {
+        return;
+    }
+
+    $default_settings = [
         'upload_method' => 'freeimage',
-        'skip_existing' => 0,
+        'freeimage' => [
+            'api_key' => '',
+        ],
+        'imgbb' => [
+            'api_key' => '',
+        ],
+        'cloudinary' => [
+            'api_key' => '',
+            'api_secret' => '',
+            'cloud_name' => '',
+            'folder' => 'iur_uploads',
+            'secure' => true
+        ],
         'quality' => 'high',
-        'target_content' => ['post', 'product'], // اضافه شد
-        'delete_after_replace' => 0 // اضافه شد
-    ]);
+        'target_content' => ['post', 'product'],
+        'delete_after_replace' => 0,
+        'auto_replace' => 'no',
+        'process_featured_image' => 1,
+        'process_content_images' => 1,
+        'process_galleries' => 1,
+        'process_custom_fields' => 0,
+        'group_limit' => 10,
+        'group_timeout' => 5
+    ];
+
+    add_option('iur_settings', $default_settings);
 }
 
-// بارگذاری فایل‌های وابسته
-require_once IUR_PLUGIN_DIR . 'includes/handlers/class-iur-error-handler.php';
-require_once IUR_PLUGIN_DIR . 'includes/services/class-freeimage-api.php';
-require_once IUR_PLUGIN_DIR . 'includes/helpers.php';
-require_once IUR_PLUGIN_DIR . 'includes/admin/class-admin-notices.php';
-require_once IUR_PLUGIN_DIR . 'includes/class-iur-processor.php';
-require_once IUR_PLUGIN_DIR . 'includes/class-iur-settings.php';
-require_once IUR_PLUGIN_DIR . 'includes/class-iur-uploader.php';
-
-// مقداردهی اولیه
-add_action('init', 'iur_init_plugin');
+// Initialize plugin
+add_action('plugins_loaded', 'iur_init_plugin');
+/**
+ * Initialize the plugin with proper dependency loading and error handling
+ */
 function iur_init_plugin() {
-    new IUR_Error_Handler();
-    new IUR_Settings();
-    IUR_Processor::init();
+    // Check and handle log file permissions first
+    iur_check_log_file_permissions();
+    
+    // Initialize core components
+    iur_initialize_core_components();
+    
+    // Initialize admin-related components
+    if (is_admin()) {
+        iur_initialize_admin_components();
+    }
+    
+    // Register meta fields
+    add_action('init', 'iur_register_meta_fields');
 }
 
-// منوی ادمین
-add_action('admin_menu', 'iur_admin_menu');
-function iur_admin_menu() {
-    $menu_slug = 'iur-image-url-replacement';
-    
-    add_menu_page(
-        'Image URL Replacement',
-        'IUR',
-        'manage_options',
-        $menu_slug,
-        'iur_admin_page',
-        'dashicons-images-alt2',
-        99
-    );
-    
-    add_submenu_page(
-        $menu_slug,
-        'Settings',
-        'Settings',
-        'manage_options',
-        'iur-settings',
-        'iur_settings_page'
-    );
+/**
+ * Check and handle log file permissions
+ */
+function iur_check_log_file_permissions() {
+    if (file_exists(IUR_LOG_FILE) && !is_writable(IUR_LOG_FILE)) {
+        add_action('admin_notices', 'iur_admin_notice_log_permission');
+        error_log('IUR Error: Log file is not writable at ' . IUR_LOG_FILE);
+    }
 }
 
-function iur_admin_page() {
-    $settings = get_option('iur_settings');
-    $process_url = wp_nonce_url(
-        admin_url('admin-post.php?action=iur_process_all'),
-        'iur_process_all_nonce'
-    );
-    ?><div class="wrap">
-    <h1>Image URL Replacement</h1>
-    
-    <div class="card">
-        <h2 class="title">Manual Processing</h2>
+/**
+ * Initialize core plugin components
+ */
+function iur_initialize_core_components() {
+    try {
+        // Initialize autoloader and load dependencies
+        $autoloader = new IUR_Autoloader();
+        $autoloader->init();
         
-        <div id="iur-process-controls">
-            <button id="iur-process-all" class="button button-primary button-large">
-                پردازش همه پست‌ها
-            </button>
-            
-            <div id="iur-progress" style="display:none; margin:20px 0;">
-                <div class="iur-progress-bar" style="height:20px; background:#0073aa; width:0%;"></div>
-            </div>
-            
-            <div id="iur-results"></div>
-        </div>
-    </div>
-    
-    <div class="card">
-        <h2 class="title">خطاهای اخیر</h2>
-        <div id="iur-error-log">
-            <?php
-            $error_log = get_option('iur_error_log', []);
-            if (!empty($error_log)) : ?>
-                <ul class="ul-disc">
-                    <?php foreach (array_slice($error_log, -5) as $error) : ?>
-                        <li>
-                            <strong><?php echo esc_html($error['time']); ?>:</strong> 
-                            <?php echo esc_html($error['message']); ?>
-                            <small>(شناسه پست: <?php echo $error['post_id']; ?>)</small>
-                        </li>
-                    <?php endforeach; ?>
-                </ul>
-                <button id="iur-clear-errors" class="button">پاکسازی خطاها</button>
-            <?php else : ?>
-                <p>هیچ خطایی ثبت نشده است</p>
-            <?php endif; ?>
-        </div>
-    </div>
-</div>
-
-<style>
-    .card {
-        background: #fff;
-        border: 1px solid #ccd0d4;
-        box-shadow: 0 1px 1px rgba(0,0,0,.04);
-        padding: 20px;
-        margin-bottom: 20px;
-        max-width: 600px;
-    }
-    .card .title {
-        margin-top: 0;
-        border-bottom: 1px solid #eee;
-        padding-bottom: 10px;
-    }
-    .button-large {
-        padding: 0 20px;
-        height: 40px;
-        line-height: 38px;
-        font-size: 16px;
-    }
-    #iur-progress {
-        background: #f1f1f1;
-        border-radius: 3px;
-        overflow: hidden;
-    }
-    .iur-progress-bar {
-        transition: width 0.3s ease;
-    }
-</style>
-
-<script>
-jQuery(document).ready(function($) {
-    // تابع برای مدیریت نمایش فیلدهای API
-    function toggleServiceFields() {
-        $('.iur-service-field').hide();
-        const service = $('#iur-upload-method').val();
+        // Initialize error handler (should be initialized early)
+        IUR_Error_Handler::init();
         
-        if(service === 'freeimage') {
-            $('#iur-freeimage-field').show();
-        } else if(service === 'imgbb') {
-            $('#iur-imgbb-field').show();
+        // Initialize AJAX handlers
+        IUR_Ajax_Handler::init();
+        
+        // Initialize settings (loads and validates settings)
+        $settings = IUR_Settings::get_instance();
+        $settings->init();
+        
+        // Initialize processor (main functionality)
+        IUR_Processor::init();
+        
+    } catch (Exception $e) {
+        error_log('IUR Core Initialization Error: ' . $e->getMessage());
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            wp_die('IUR Plugin Initialization Failed: ' . $e->getMessage());
         }
     }
+}
 
-    // پردازش دسته‌ای پست‌ها
-    $('#iur-process-all').on('click', function(e) {
-        e.preventDefault();
+/**
+ * Initialize admin-specific components
+ */
+function iur_initialize_admin_components() {
+    try {
+        // Initialize admin interface
+        IUR_Admin::init();
         
-        const $button = $(this);
-        const originalText = $button.text();
-        const $progressBar = $('.iur-progress-bar');
-        const $progressContainer = $('#iur-progress');
-        const $resultsContainer = $('#iur-results');
+        // Initialize bulk processor
+        require_once IUR_PLUGIN_DIR . 'includes/class-iur-bulk-processor.php';
+        IUR_Bulk_Processor::init();
         
-        $button.prop('disabled', true).text('در حال پردازش...');
-        $progressContainer.show();
-        $resultsContainer.hide().html('');
-        $progressBar.css('width', '0%');
+        // Add AJAX handlers
+        add_action('wp_ajax_iur_process_single_post', 'iur_ajax_process_single_post');
+        add_action('admin_post_iur_clear_errors', 'iur_clear_errors');
         
-        // ارسال درخواست AJAX
-        $.ajax({
-            url: ajaxurl,
-            type: 'POST',
-            data: {
-                action: 'iur_process_all_posts',
-                security: iur_vars.nonce
-            },
-            dataType: 'json',
-            xhr: function() {
-                const xhr = new window.XMLHttpRequest();
-                xhr.addEventListener('progress', function(e) {
-                    if (e.lengthComputable) {
-                        const percent = Math.round((e.loaded / e.total) * 100);
-                        $progressBar.css('width', percent + '%');
-                    }
-                });
-                return xhr;
-            },
-            success: function(response) {
-                if (response.success) {
-                    $resultsContainer.html(`
-                        <div class="notice notice-success">
-                            <p><strong>پردازش با موفقیت انجام شد!</strong></p>
-                            <p>تعداد پست‌های پردازش شده: ${response.data.processed}</p>
-                            <p>تعداد تصاویر جایگزینی شده: ${response.data.replaced}</p>
-                            <p>تعداد خطاها: ${response.data.errors}</p>
-                        </div>
-                    `).show();
-                } else {
-                    $resultsContainer.html(`
-                        <div class="notice notice-error">
-                            <p><strong>خطا در پردازش:</strong> ${response.data.message}</p>
-                        </div>
-                    `).show();
-                }
-            },
-            error: function(xhr) {
-                $resultsContainer.html(`
-                    <div class="notice notice-error">
-                        <p><strong>خطای سیستمی:</strong> ${xhr.statusText || 'خطای ناشناخته'}</p>
-                    </div>
-                `).show();
-            },
-            complete: function() {
-                $button.prop('disabled', false).text(originalText);
-            }
+    } catch (Exception $e) {
+        error_log('IUR Admin Initialization Error: ' . $e->getMessage());
+        add_action('admin_notices', function() use ($e) {
+            echo '<div class="error"><p>IUR Admin Initialization Error: ' . esc_html($e->getMessage()) . '</p></div>';
         });
-    });
+    }
+}
 
-    // پاکسازی خطاها
-    $('#iur-clear-errors').on('click', function(e) {
-        e.preventDefault();
-        
-        if (!confirm('آیا مطمئن هستید می‌خواهید تمام خطاها را پاک کنید؟')) {
-            return;
-        }
-        
-        const $button = $(this);
-        const originalText = $button.text();
-        
-        $button.prop('disabled', true).text('در حال پاکسازی...');
-        
-        $.post(ajaxurl, {
-            action: 'iur_clear_errors',
-            security: iur_vars.nonce
-        }, function(response) {
-            if (response.success) {
-                $('#iur-error-log').html('<p>هیچ خطایی ثبت نشده است</p>');
-            } else {
-                alert('خطا در پاکسازی خطاها: ' + response.data.message);
-            }
-            $button.prop('disabled', false).text(originalText);
-        });
-    });
-});
-</script>
+// Admin notice for log permission issue
+function iur_admin_notice_log_permission() {
+    ?>
+    <div class="error">
+        <p><?php _e('فایل iur-debug.log قابل نوشتن نیست. لطفاً دسترسی‌ها را بررسی کنید.', 'iur'); ?></p>
+    </div>
     <?php
 }
 
-// صفحه تنظیمات
-function iur_settings_page() {
-    require_once IUR_PLUGIN_DIR . 'includes/admin/admin-page.php';
-    iur_settings_page_content();
+// Register custom meta fields
+function iur_register_meta_fields() {
+    register_meta('post', '_iur_upload_status', [
+        'type' => 'object',
+        'single' => true,
+        'show_in_rest' => [
+            'schema' => [
+                'type' => 'object',
+                'properties' => [
+                    'status' => ['type' => 'string'],
+                    'service' => ['type' => 'string'],
+                    'images' => [
+                        'type' => 'array',
+                        'items' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'original_url' => ['type' => 'string'],
+                                'uploaded_url' => ['type' => 'string'],
+                                'success' => ['type' => 'boolean'],
+                                'reason' => ['type' => 'string'],
+                                'error' => ['type' => 'string']
+                            ]
+                        ]
+                    ]
+                ]
+            ]
+        ],
+        'auth_callback' => function() { 
+            return current_user_can('edit_posts'); 
+        }
+    ]);
+    
+    register_meta('post', '_iur_last_processed', [
+        'type' => 'string',
+        'single' => true,
+        'show_in_rest' => false
+    ]);
 }
 
-// ذخیره تنظیمات
-add_action('admin_post_iur_save_settings', 'iur_save_settings');
-function iur_save_settings() {
+// AJAX handler for single post processing
+add_action('wp_ajax_iur_process_single_post', 'iur_ajax_process_single_post');
+function iur_ajax_process_single_post() {
+    check_ajax_referer('iur_process_nonce', 'security');
+    
     if (!current_user_can('manage_options')) {
-        wp_die('Unauthorized');
+        wp_send_json_error(['message' => __('Unauthorized access', 'iur')], 403);
     }
-    
-    check_admin_referer('iur_settings_nonce');
-    
-    $settings = get_option('iur_settings', []);
-    
-    $settings['freeimage_api_key'] = sanitize_text_field($_POST['freeimage_api_key'] ?? '');
-    $settings['imgbb_api_key'] = sanitize_text_field($_POST['imgbb_api_key'] ?? '');
-    $settings['auto_replace'] = isset($_POST['auto_replace']) ? 'yes' : 'no';
-    $settings['post_types'] = $_POST['post_types'] ?? ['post'];
-    $settings['skip_existing'] = isset($_POST['skip_existing']) ? 1 : 0;
-    $settings['quality'] = sanitize_text_field($_POST['quality'] ?? 'high');
-    $settings['upload_method'] = sanitize_text_field($_POST['upload_method'] ?? 'freeimage');
-    
-    update_option('iur_settings', $settings);
-    
-    wp_redirect(admin_url('admin.php?page=iur-settings&saved=1'));
-    exit;
-}
 
-// پردازش دسته‌ای پست‌ها
-add_action('admin_post_iur_process_all', 'iur_process_all_handler');
-function iur_process_all_handler() {
-    if (!current_user_can('manage_options')) {
-        wp_die('Unauthorized');
-    }
-    
-    check_admin_referer('iur_process_all_nonce');
+    $post_id = intval($_POST['post_id']);
     
     try {
-        $result = IUR_Processor::process_all_posts();
-        $count = $result['total_replaced'];
+        $processor = IUR_Processor::get_instance();
+        $result = $processor->process_post($post_id);
         
-        wp_redirect(admin_url('admin.php?page=iur-image-url-replacement&processed=1&count=' . $count));
+        wp_send_json_success([
+            'replaced' => $result['replaced'],
+            'warnings' => $result['warnings'],
+            'errors'  => $result['errors']
+        ]);
     } catch (Exception $e) {
-        wp_redirect(admin_url(
-            'admin.php?page=iur-image-url-replacement&error=1&message=' . urlencode($e->getMessage())
-        ));
+        wp_send_json_error([
+            'message' => $e->getMessage(),
+            'code' => $e->getCode()
+        ], 500);
     }
-    exit;
 }
 
-// پاکسازی خطاها
+// Clear errors handler
 add_action('admin_post_iur_clear_errors', 'iur_clear_errors');
 function iur_clear_errors() {
     if (!current_user_can('manage_options')) {
-        wp_die('Unauthorized');
+        wp_die(__('Unauthorized access', 'iur'), 403);
     }
     
     check_admin_referer('iur_clear_errors_nonce');
     
-    update_option('iur_error_log', []);
+    $error_handler = IUR_Error_Handler::get_instance();
+    $error_handler->clear_logs();
     
-    wp_redirect(admin_url('admin.php?page=iur-image-url-replacement'));
+    wp_safe_redirect(admin_url('admin.php?page=iur-settings'));
     exit;
-}
-
-// اسکریپت‌های ادمین برای صفحه تنظیمات (نسخه اصلاح شده)
-add_action('admin_enqueue_scripts', 'iur_admin_scripts');
-function iur_admin_scripts($hook) {
-    // فقط در صفحه تنظیمات پلاگین اسکریپت را بارگذاری کن
-    if ($hook === 'toplevel_page_iur-settings' || $hook === 'iur_page_iur-settings') {
-        // بارگذاری jQuery
-        wp_enqueue_script('jquery');
-        
-        // بارگذاری فایل admin.js از پوشه js
-        wp_enqueue_script(
-            'iur-admin-js',
-            plugins_url('admin/js/admin.js', __FILE__),
-            ['jquery'],
-            '1.0',
-            true
-        );
-    }
 }
