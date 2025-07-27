@@ -37,7 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['iur_processing_settin
     
     echo '<div class="notice notice-success is-dismissible"><p>' . __('Settings saved successfully!', 'iur') . '</p></div>';
 }
-
+?>
 <div class="iur-stats">
     <ul>
         <li><strong><?php _e('Total Posts:', 'iur'); ?></strong> <?php echo esc_html($stats['total']); ?></li>
