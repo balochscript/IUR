@@ -37,9 +37,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['iur_processing_settin
     
     echo '<div class="notice notice-success is-dismissible"><p>' . __('Settings saved successfully!', 'iur') . '</p></div>';
 }
-add_settings_error('iur_processing_messages', 'processing_saved', __('Settings saved successfully!', 'iur'), 'updated');
-settings_errors('iur_processing_messages');
-?>
 
 <div class="iur-stats">
     <ul>
