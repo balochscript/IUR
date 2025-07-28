@@ -1,31 +1,27 @@
 <?php
 /**
- * IUR Advanced Settings
- *
- * This file contains the advanced settings section for the Image URL Replacement plugin.
+ * IUR Advanced Settings Partial
  */
 
-// Prevent direct access to the file
-if ( !defined('ABSPATH') ) {
+// Prevent direct access
+if (!defined('ABSPATH')) {
     exit;
 }
 
-// Get current settings with default values
+// Get current settings
 $settings = get_option('iur_settings', [
-    'skip_existing'      => 0,
-    'post_types'         => ['post'],
-    'quality'            => 'high',
-    'delete_after_replace'=> 0,
-    'max_width'          => 0,
-    'max_height'         => 0
+    'skip_existing' => 0,
+    'post_types' => ['post'],
+    'quality' => 'high',
+    'delete_after_replace' => 0,
+    'max_width' => 0,
+    'max_height' => 0
 ]);
+$post_types = get_post_types(['public' => true], 'objects');
 ?>
-
-<?php $post_types = get_post_types(['public' => true], 'objects'); ?>
 
 <table class="form-table">
 
-  <!-- Included Post Types -->
   <tr>
     <th scope="row">
       <label><?php esc_html_e('Included Post Types', 'iur'); ?></label>
@@ -47,7 +43,6 @@ $settings = get_option('iur_settings', [
     </td>
   </tr>
 
-  <!-- Already Processed Tracking -->
   <tr>
     <th scope="row">
       <label for="iur_skip_existing"><?php esc_html_e('Already Processed Tracking', 'iur'); ?></label>
@@ -56,7 +51,7 @@ $settings = get_option('iur_settings', [
       <label>
         <input type="checkbox" name="iur_settings[skip_existing]" id="iur_skip_existing"
           value="1" <?php checked($settings['skip_existing'] ?? 0, 1); ?>>
-        <?php esc_html_e('Skip images that were already replaced before.', 'iur'); ?>
+        <?php esc_html_e('Skip images that were already replaced before', 'iur'); ?>
       </label>
       <p class="description">
         <?php esc_html_e('If enabled, images that have already been processed will not be replaced again.', 'iur'); ?>
@@ -64,7 +59,6 @@ $settings = get_option('iur_settings', [
     </td>
   </tr>
 
-  <!-- Image Quality -->
   <tr>
     <th scope="row">
       <label for="iur_quality"><?php esc_html_e('Image Quality', 'iur'); ?></label>
@@ -90,7 +84,6 @@ $settings = get_option('iur_settings', [
     </td>
   </tr>
 
-  <!-- Delete Original After Replacement -->
   <tr>
     <th scope="row">
       <label for="iur_delete_after_replace"><?php esc_html_e('Delete Original After Replacement', 'iur'); ?></label>
@@ -99,7 +92,7 @@ $settings = get_option('iur_settings', [
       <label>
         <input type="checkbox" name="iur_settings[delete_after_replace]" id="iur_delete_after_replace"
           value="1" <?php checked($settings['delete_after_replace'] ?? 0, 1); ?>>
-        <?php esc_html_e('Permanently remove original images once replacement is successful.', 'iur'); ?>
+        <?php esc_html_e('Permanently remove original images once replacement is successful', 'iur'); ?>
       </label>
       <p class="description" style="color: #dc3545; font-weight: 500;">
         &#9888; <?php esc_html_e('Warning: This action cannot be undone. Original files will be deleted permanently.', 'iur'); ?>
@@ -107,7 +100,6 @@ $settings = get_option('iur_settings', [
     </td>
   </tr>
 
-  <!-- Maximum Image Dimensions -->
   <tr>
     <th scope="row">
       <label><?php esc_html_e('Maximum Image Dimensions', 'iur'); ?></label>
