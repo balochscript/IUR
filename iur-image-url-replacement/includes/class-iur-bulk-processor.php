@@ -45,9 +45,6 @@ class IUR_Bulk_Processor {
     set_transient('iur_bulk_lock', 1, 300);
   
   if (function_exists('set_time_limit')) { @set_time_limit($timeout + 30); }
-         {
-    wp_die(__('Unauthorized.', 'iur'), '', ['response' => 403]);
-}
 
         if (empty($_REQUEST['post']) || !is_array($_REQUEST['post'])) {
             return;
