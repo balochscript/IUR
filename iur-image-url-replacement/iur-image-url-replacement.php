@@ -82,9 +82,6 @@ function iur_initialize_core_components() {
         $autoloader = new IUR_Autoloader();
         $autoloader->init();
         
-        // Initialize error handler (should be initialized early)
-        IUR_Error_Handler::init();
-        
         // Initialize AJAX handlers
         IUR_Ajax_Handler::init();
         
@@ -192,7 +189,7 @@ function iur_ajax_process_single_post() {
     }
 }
 
-// Clear errors handler
+// Clear errors handler (now only clears any plugin-related notices, not logs)
 add_action('admin_post_iur_clear_errors', 'iur_clear_errors');
 function iur_clear_errors() {
     if (!current_user_can('manage_options')) {
@@ -201,9 +198,9 @@ function iur_clear_errors() {
     
     check_admin_referer('iur_clear_errors_nonce');
     
-    $error_handler = IUR_Error_Handler::get_instance();
-    $error_handler->clear_logs();
-    
+    // If you have a new error/notice handling system, call its clear method here.
+    // Otherwise, leave this empty or remove if not used elsewhere.
+
     wp_safe_redirect(admin_url('admin.php?page=iur-settings'));
     exit;
 }
