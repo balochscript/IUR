@@ -1,9 +1,9 @@
 <?php
 /**
  * Plugin Name: IUR - Image URL Replacement
- * Description: Automatically replaces the URLs of product and post images with links hosted on Freeimage.host or other supported image hosting services. This plugin helps migrate and optimize image delivery by updating all image references in your WordPress content to external hosts, improving site performance and reducing storage usage.
+ * Description: Automatically replace product and post image URLs with links hosted on Freeimage.host or other services
  * Version: 1.0.0
- * Author: Baloch Script
+ * Author: Baloch Mark
  * License: GPLv2
  */
 
@@ -16,7 +16,6 @@ define('IUR_VERSION', '1.0.0');
 
 // Load dependencies
 require_once IUR_PLUGIN_DIR . 'includes/class-iur-autoloader.php';
-
 require_once IUR_PLUGIN_DIR . 'includes/vendor/autoload.php';
 
 // Activation hook
@@ -82,7 +81,10 @@ function iur_initialize_core_components() {
         // Initialize autoloader and load dependencies
         $autoloader = new IUR_Autoloader();
         $autoloader->init();
-
+        
+        // Initialize error handler (should be initialized early)
+        IUR_Error_Handler::init();
+        
         // Initialize AJAX handlers
         IUR_Ajax_Handler::init();
         
@@ -95,7 +97,7 @@ function iur_initialize_core_components() {
         
     } catch (Exception $e) {
         if (defined('WP_DEBUG') && WP_DEBUG) {
-            wp_die('IUR Plugin Initialization Failed: ' . $e->getMessage());
+            wp_die(__('IUR Plugin Initialization Failed: ', 'iur') . esc_html($e->getMessage()));
         }
     }
 }
@@ -114,10 +116,11 @@ function iur_initialize_admin_components() {
         
         // Add AJAX handlers
         add_action('wp_ajax_iur_process_single_post', 'iur_ajax_process_single_post');
+        add_action('admin_post_iur_clear_errors', 'iur_clear_errors');
         
     } catch (Exception $e) {
         add_action('admin_notices', function() use ($e) {
-            echo '<div class="error"><p>IUR Admin Initialization Error: ' . esc_html($e->getMessage()) . '</p></div>';
+            echo '<div class="error"><p>' . esc_html(__('IUR Admin Initialization Error: ', 'iur')) . esc_html($e->getMessage()) . '</p></div>';
         });
     }
 }
@@ -187,4 +190,20 @@ function iur_ajax_process_single_post() {
             'code' => $e->getCode()
         ], 500);
     }
+}
+
+// Clear errors handler
+add_action('admin_post_iur_clear_errors', 'iur_clear_errors');
+function iur_clear_errors() {
+    if (!current_user_can('manage_options')) {
+        wp_die(__('Unauthorized access', 'iur'), 403);
+    }
+    
+    check_admin_referer('iur_clear_errors_nonce');
+    
+    $error_handler = IUR_Error_Handler::get_instance();
+    $error_handler->clear_logs();
+    
+    wp_safe_redirect(admin_url('admin.php?page=iur-settings'));
+    exit;
 }
