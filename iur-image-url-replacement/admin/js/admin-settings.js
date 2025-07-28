@@ -22,14 +22,14 @@ jQuery(document).ready(function($) {
         e.preventDefault();
 
         if (confirm(iurSettings.i18n.confirmReset)) {
-            $.post(ajaxurl, {
+            $.post(iurSettings.ajaxurl, {
                 action: 'iur_reset_settings',
                 _wpnonce: iurSettings.nonce
             }, function(response) {
                 if (response.success) {
                     location.reload();
                 } else {
-                    alert('Error: ' + (response.data || 'Unknown error.'));
+                    alert(iurSettings.i18n.resetError + ' ' + (response.data || iurSettings.i18n.unknownError));
                 }
             });
         }
