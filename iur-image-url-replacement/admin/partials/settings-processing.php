@@ -226,7 +226,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['iur_processing_settin
                 </button>
                 
                 <div id="iur_ajax_result" style="margin-top: 15px; background: #fff; padding: 10px; border: 1px solid #ccc; display: none;">
-                    <strong>📋 نتیجه پردازش:</strong>
+                    <strong>📋  Processing result:</strong>
                     <pre id="iur_ajax_output" style="white-space: pre-wrap; word-break: break-word; margin-top: 5px;"></pre>
                 </div>
                 
