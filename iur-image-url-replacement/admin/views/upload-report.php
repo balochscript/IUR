@@ -1,6 +1,6 @@
 <?php
-// دریافت همه post typeهای سایت (عمومی و خصوصی، حتی سفارشی)
-$post_types = get_post_types([], 'names'); 
+// Get all post types (public, private, custom)
+$post_types = get_post_types([], 'names');
 $posts = get_posts([
     'post_type'    => $post_types,
     'numberposts'  => -1,
@@ -9,28 +9,25 @@ $posts = get_posts([
         'compare' => 'EXISTS'
     ]]
 ]);
-
 ?>
 
 <h2 style="color: #6A9CA5;">📊 Upload Status Report for Post Images</h2>
 
-<!-- نوار پیشرفت -->
 <div id="iur-progress-container" style="margin: 20px 0; background: #f0f9fb; border: 1px solid #6A9CA5; border-radius: 6px; position: relative; height: 26px;">
   <div id="iur-progress-bar" style="width: 0%; height: 100%; background: #4CAF50; border-radius: 6px; transition: width 0.4s ease;"></div>
   <span id="iur-progress-label" style="position: absolute; top: 0; left: 50%; transform: translateX(-50%); font-weight: bold; color: #444;">0%</span>
 </div>
 
-<!-- جدول گزارش -->
 <table class="widefat striped" style="margin-top: 20px;">
   <thead>
     <tr>
-      <th>Post</th>
-      <th>Upload Service</th>
-      <th>Total Images</th>
-      <th>Successful</th>
-      <th>Success Rate</th>
-      <th>Status</th>
-      <th>Action</th>
+      <th><?php esc_html_e('Post', 'iur'); ?></th>
+      <th><?php esc_html_e('Upload Service', 'iur'); ?></th>
+      <th><?php esc_html_e('Total Images', 'iur'); ?></th>
+      <th><?php esc_html_e('Successful', 'iur'); ?></th>
+      <th><?php esc_html_e('Success Rate', 'iur'); ?></th>
+      <th><?php esc_html_e('Status', 'iur'); ?></th>
+      <th><?php esc_html_e('Action', 'iur'); ?></th>
     </tr>
   </thead>
   <tbody>
@@ -61,8 +58,8 @@ $posts = get_posts([
       <td>
         <button class="iur-process-post button"
                 data-postid="<?php echo esc_attr($post->ID); ?>"
-                data-nonce="<?php echo wp_create_nonce('iur_process_post'); ?>">
-          📤 Process
+                data-nonce="<?php echo esc_attr(wp_create_nonce('iur_process_post')); ?>">
+          📤 <?php esc_html_e('Process', 'iur'); ?>
         </button>
       </td>
     </tr>
@@ -70,7 +67,6 @@ $posts = get_posts([
   </tbody>
 </table>
 
-<!-- JavaScript برای دکمه Process -->
 <script>
 document.querySelectorAll('.iur-process-post').forEach(btn => {
   btn.addEventListener('click', function(e) {
@@ -79,7 +75,7 @@ document.querySelectorAll('.iur-process-post').forEach(btn => {
     const nonce  = this.dataset.nonce;
 
     this.disabled = true;
-    this.textContent = '⏳ Processing...';
+    this.textContent = '⏳ <?php echo esc_js(__('Processing...', 'iur')); ?>';
 
     fetch(ajaxurl, {
       method: 'POST',
@@ -93,17 +89,17 @@ document.querySelectorAll('.iur-process-post').forEach(btn => {
     .then(res => res.json())
     .then(data => {
       if (data.success) {
-        this.textContent = '✅ Done';
+        this.textContent = '✅ <?php echo esc_js(__('Done', 'iur')); ?>';
         const row = this.closest('tr');
         row.children[4].textContent = data.data.percent + '%';
         row.children[5].textContent = data.data.status;
       } else {
-        this.textContent = '❌ Failed';
+        this.textContent = '❌ <?php echo esc_js(__('Failed', 'iur')); ?>';
         console.error(data.data);
       }
     })
     .catch(err => {
-      this.textContent = '❌ Error';
+      this.textContent = '❌ <?php echo esc_js(__('Error', 'iur')); ?>';
       console.error(err);
     });
   });
