@@ -172,10 +172,6 @@ if (!empty($method_icons[$selected])) {
     </p>
   </td>
 </tr>
-<form>
-  <?php wp_nonce_field('iur_test_connection_action', 'nonce'); ?>
-<button id="iur-test-connection" class="button"><?php _e('Test Connection', 'iur'); ?></button>
-</form>
     <!-- تست اتصال -->
     <tr>
   <th scope="row"><?php esc_html_e('Connection Test', 'iur'); ?></th>
