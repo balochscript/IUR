@@ -1,194 +1,159 @@
-jQuery(document).ready(function ($) {
-
-    // Filter table rows
-    $('#iur2-filter').on('keyup', function () {
-        var value = $(this).val().toLowerCase();
-        $('#iur2-table tbody tr').filter(function () {
-            $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
-        });
-    });
-
-    // Select/Deselect all checkboxes
-    $('#iur2-select-all').on('click', function () {
-        $('.iur2-select').prop('checked', this.checked);
-    });
-
-    $('.iur2-select').on('click', function () {
-        if (!this.checked) {
-            $('#iur2-select-all').prop('checked', false);
+jQuery(document).ready(function($) {
+    // ======= Show/hide API service fields ======= //
+    function toggleServiceFields() {
+        $('.iur-service-field').hide();
+        const service = $('#iur-upload-method').val();
+        
+        switch(service) {
+            case 'freeimage':
+                $('#tr_freeimage_api_key').show();
+                break;
+            case 'imgbb':
+                $('#tr_imgbb_api_key').show();
+                break;
+            case 'cloudinary':
+                $('#tr_cloudinary_api_key, #tr_cloudinary_api_secret, #tr_cloudinary_cloud_name').show();
+                break;
         }
-    });
+    }
 
-    // Delete single row
-    $('.iur2-delete').on('click', function (e) {
+    // Initial run and change event
+    toggleServiceFields();
+    $('#iur-upload-method').on('change', toggleServiceFields);
+
+    // ======= Clear errors ======= //
+    $('#iur-clear-errors').on('click', function(e) {
         e.preventDefault();
-        var id = $(this).data('id');
-        if (!confirm(iur_vars.i18n.confirmDelete)) return;
+        
+        if (!confirm(iur_vars.i18n.confirmClearErrors)) return;
+        
+        const $button = $(this);
+        const originalText = $button.text();
+        $button.prop('disabled', true).text(iur_vars.i18n.clearing);
 
-        var $row = $(this).closest('tr');
         $.post(iur_vars.ajaxurl, {
-            action: 'iur2_delete',
-            id: id,
-            _wpnonce: iur_vars.nonce
-        }, function (response) {
-            if (response.success) {
-                $row.fadeOut(300, function () {
-                    $(this).remove();
-                });
+            action: 'iur_clear_errors',
+            security: iur_vars.nonce
+        }).done(function(response) {
+            if (response?.success) {
+                $('#iur-error-log').html('<p class="notice notice-success">' + iur_vars.i18n.errorsCleared + '</p>');
             } else {
-                alert(iur_vars.i18n.deleteError + ' ' + (response.data || iur_vars.i18n.unknownError));
+                alert(iur_vars.i18n.error + ': ' + (response?.data?.message || iur_vars.i18n.invalidServerResponse));
             }
+        }).always(() => {
+            $button.prop('disabled', false).text(originalText);
         });
     });
 
-    // Bulk delete
-    $('#iur2-bulk-delete').on('click', function (e) {
+    // ======= Toggle advanced settings ======= //
+    $('.iur-toggle-advanced').on('click', function(e) {
         e.preventDefault();
-        var ids = $('.iur2-select:checked').map(function () {
-            return $(this).val();
-        }).get();
+        $('.iur-advanced-settings').stop(true, true).slideToggle();
+    });
+    
+    // ======= Process single post ======= //
+    $('.iur-process-post').on('click', function(e) {
+        e.preventDefault();
+        
+        const $button = $(this);
+        const post_id = $button.data('postid');
+        const originalText = $button.text();
+        
+        $button.prop('disabled', true).text(iur_vars.i18n.processing);
 
-        if (ids.length === 0) {
-            alert(iur_vars.i18n.nothingSelected);
-            return;
+        $.post(iur_vars.ajaxurl, {
+            action: 'iur_process_single_post',
+            security: iur_vars.nonce,
+            post_id: post_id
+        }).done(function(response) {
+            if (response.success) {
+                alert(iur_vars.i18n.postProcessed + ' ' + response.data.replaced);
+                location.reload();
+            } else {
+                alert(iur_vars.i18n.error + ': ' + response.data.message);
+            }
+        }).fail(function() {
+            alert(iur_vars.i18n.serverError);
+        }).always(() => {
+            $button.prop('disabled', false).text(originalText);
+        });
+    });
+
+    // ======= Bulk process ======= //
+    $('#iur_bulk_process').on('click', function(e) {
+        e.preventDefault();
+        
+        const $button = $(this);
+        const $status = $('#iur_bulk_process_status');
+        const $progressBar = $('#iur_progress_bar');
+        const $progressFill = $('#iur_progress_bar_fill');
+        const $progressText = $('#iur_progress_text');
+        const $ajaxResult = $('#iur_ajax_result');
+        const $ajaxOutput = $('#iur_ajax_output');
+
+        // Initial state
+        $button.prop('disabled', true);
+        $status.html('<span class="spinner is-active"></span> ' + iur_vars.i18n.processing);
+        $progressBar.show();
+        $ajaxResult.hide();
+        $ajaxOutput.empty();
+
+        let processed = 0;
+        let total = 0;
+        let errors = 0;
+
+        function processBatch(offset = 0) {
+            $.ajax({
+                url: iur_vars.ajaxurl,
+                type: 'POST',
+                dataType: 'json',
+                timeout: parseInt(iur_vars.timeout) * 1000,
+                data: {
+                    action: 'iur_bulk_process',
+                    offset: offset,
+                    bulk_limit: iur_vars.bulk_limit,
+                    security: iur_vars.nonce
+                },
+                success: function(response) {
+                    if (response.success) {
+                        processed += response.data.processed;
+                        total = response.data.total || total;
+                        errors += response.data.errors || 0;
+
+                        // Update progress
+                        const percent = total > 0 ? Math.round((processed / total) * 100) : 0;
+                        $progressFill.css('width', percent + '%');
+                        $progressText.text(`${processed} / ${total} (${percent}%)`);
+
+                        // Show details
+                        if (response.data.message) {
+                            $ajaxOutput.append(response.data.message + '\n');
+                            $ajaxResult.show();
+                        }
+
+                        if (response.data.completed) {
+                            $status.html('<span style="color:#28a745;">✓ ' + iur_vars.i18n.bulkCompleted + '</span>');
+                            $button.prop('disabled', false);
+                        } else {
+                            processBatch(offset + parseInt(iur_vars.bulk_limit));
+                        }
+                    } else {
+                        $status.html('<span style="color:#dc3545;">✗ ' + (response.data.message || iur_vars.i18n.bulkError) + '</span>');
+                        $button.prop('disabled', false);
+                    }
+                },
+                error: function(xhr, textStatus) {
+                    let errorMessage = iur_vars.i18n.serverError;
+                    if (textStatus === 'timeout') {
+                        errorMessage = iur_vars.i18n.timeoutError;
+                    }
+                    $status.html('<span style="color:#dc3545;">✗ ' + errorMessage + '</span>');
+                    $button.prop('disabled', false);
+                }
+            });
         }
-        if (!confirm(iur_vars.i18n.confirmBulkDelete)) return;
 
-        $.post(iur_vars.ajaxurl, {
-            action: 'iur2_bulk_delete',
-            ids: ids,
-            _wpnonce: iur_vars.nonce
-        }, function (response) {
-            if (response.success) {
-                ids.forEach(function (id) {
-                    $('#iur2-row-' + id).fadeOut(300, function () {
-                        $(this).remove();
-                    });
-                });
-            } else {
-                alert(iur_vars.i18n.bulkDeleteError + ' ' + (response.data || iur_vars.i18n.unknownError));
-            }
-        });
-    });
-
-    // Bulk process
-    $('#iur2_bulk_process').on('click', function (e) {
-        e.preventDefault();
-
-        var $btn = $(this);
-        var $status = $('#iur2_bulk_process_status');
-        $btn.prop('disabled', true);
-        $status.text(iur_vars.i18n.processing);
-
-        $.post(iur_vars.ajaxurl, {
-            action: 'iur2_bulk_process',
-            _wpnonce: iur_vars.nonce
-        }, function (response) {
-            $btn.prop('disabled', false);
-            if (response.success) {
-                $status.text(iur_vars.i18n.success);
-            } else {
-                $status.text(iur_vars.i18n.error + ' ' + (response.data || iur_vars.i18n.unknownError));
-            }
-        }).fail(function (jqXHR, textStatus) {
-            $btn.prop('disabled', false);
-            let msg = iur_vars.i18n.error;
-            if (textStatus === 'timeout') msg = iur_vars.i18n.timeout;
-            $status.text(msg);
-        });
-    });
-
-    // Modal show
-    $('.iur2-modal-open').on('click', function (e) {
-        e.preventDefault();
-        var id = $(this).data('id');
-        $('#iur2-modal-' + id).fadeIn(200);
-    });
-
-    // Modal close
-    $('.iur2-modal-close').on('click', function (e) {
-        e.preventDefault();
-        $(this).closest('.iur2-modal').fadeOut(200);
-    });
-
-    // Single process
-    $('.iur2-process').on('click', function (e) {
-        e.preventDefault();
-        var $btn = $(this);
-        var id = $btn.data('id');
-        $btn.prop('disabled', true).text(iur_vars.i18n.processing);
-
-        $.post(iur_vars.ajaxurl, {
-            action: 'iur2_process',
-            id: id,
-            _wpnonce: iur_vars.nonce
-        }, function (response) {
-            $btn.prop('disabled', false).text(iur_vars.i18n.process);
-            if (response.success) {
-                $btn.closest('tr').find('.iur2-status').text(iur_vars.i18n.completed);
-            } else {
-                alert(iur_vars.i18n.processError + ' ' + (response.data || iur_vars.i18n.unknownError));
-            }
-        });
-    });
-
-    // Bulk select process
-    $('#iur2-bulk-process').on('click', function (e) {
-        e.preventDefault();
-        var ids = $('.iur2-select:checked').map(function () {
-            return $(this).val();
-        }).get();
-
-        if (ids.length === 0) {
-            alert(iur_vars.i18n.nothingSelected);
-            return;
-        }
-
-        if (!confirm(iur_vars.i18n.confirmBulkProcess)) return;
-
-        var $btn = $(this);
-        var $status = $('#iur2-bulk-process-status');
-        $btn.prop('disabled', true);
-        $status.text(iur_vars.i18n.processing);
-
-        $.post(iur_vars.ajaxurl, {
-            action: 'iur2_bulk_process_selected',
-            ids: ids,
-            _wpnonce: iur_vars.nonce
-        }, function (response) {
-            $btn.prop('disabled', false);
-            if (response.success) {
-                $status.text(iur_vars.i18n.success);
-                ids.forEach(function (id) {
-                    $('#iur2-row-' + id).find('.iur2-status').text(iur_vars.i18n.completed);
-                });
-            } else {
-                $status.text(iur_vars.i18n.error + ' ' + (response.data || iur_vars.i18n.unknownError));
-            }
-        }).fail(function (jqXHR, textStatus) {
-            $btn.prop('disabled', false);
-            let msg = iur_vars.i18n.error;
-            if (textStatus === 'timeout') msg = iur_vars.i18n.timeout;
-            $status.text(msg);
-        });
-    });
-
-    // Copy url
-    $('.iur2-copy-url').on('click', function (e) {
-        e.preventDefault();
-        var url = $(this).data('url');
-        var $temp = $("<input>");
-        $("body").append($temp);
-        $temp.val(url).select();
-        document.execCommand("copy");
-        $temp.remove();
-        alert(iur_vars.i18n.copied);
-    });
-
-    // Reset table filter
-    $('#iur2-reset-filter').on('click', function (e) {
-        e.preventDefault();
-        $('#iur2-filter').val('');
-        $('#iur2-table tbody tr').show();
+        // Start processing
+        processBatch();
     });
 });
