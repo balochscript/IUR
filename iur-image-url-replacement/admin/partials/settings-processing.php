@@ -1,25 +1,24 @@
 <?php
 /**
- * تنظیمات پردازش افزونه IUR
- * 
- * این فایل شامل بخش تنظیمات مربوط به فرآیند پردازش تصاویر می‌باشد
+ * IUR Plugin Processing Settings
+ *
+ * This file contains the settings section related to the image processing workflow.
  */
 
 if (!defined('ABSPATH')) {
-    exit; // جلوگیری از دسترسی مستقیم
+    exit; // Prevent direct access
 }
 
 $settings = get_option('iur_settings', [
-    'auto_replace' => 'no',
-    'post_types' => ['post', 'product'],
-    'process_featured_image' => 'yes',
-    'process_content_images' => 'yes',
-    'process_galleries' => 'yes',
-    'bulk_limit' => 50,
-    'timeout' => 30
+    'auto_replace'             => 'no',
+    'post_types'               => ['post', 'product'],
+    'process_featured_image'   => 'yes',
+    'process_content_images'   => 'yes',
+    'process_galleries'        => 'yes',
+    'bulk_limit'               => 50,
+    'timeout'                  => 30,
 ]);
 
-// ذخیره تنظیمات اگر فرم ارسال شده باشد
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['iur_processing_settings'])) {
     check_admin_referer('iur_processing_settings_nonce');
     
@@ -44,7 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['iur_processing_settin
     <?php wp_nonce_field('iur_settings_action', 'iur_settings_nonce'); ?>
 
     <table class="form-table">
-        <!-- جایگزینی خودکار -->
+        <!-- auto_replace  -->
         <tr>
             <th scope="row"><?php esc_html_e('Delete Original Images After Replacement', 'iur'); ?></th>
             <td>
@@ -63,7 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['iur_processing_settin
             </td>
         </tr>
 
-        <!-- محدودیت پردازش گروهی -->
+        <!--   bulk_limit -->
         <tr>
             <th scope="row">
                 <label for="iur_bulk_limit"><?php esc_html_e('Bulk Processing Limit', 'iur'); ?></label>
@@ -78,7 +77,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['iur_processing_settin
             </td>
         </tr>
 
-        <!-- زمان‌دهی پردازش -->
+        <!-- Bulk process timeout  -->
         <tr>
             <th scope="row">
                 <label for="iur_timeout"><?php esc_html_e('Processing Timeout (seconds)', 'iur'); ?></label>
@@ -94,7 +93,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['iur_processing_settin
             </td>
         </tr>
 
-        <!-- انواع محتوای قابل پردازش -->
+        <!-- Content Types -->
         <tr>
             <th scope="row"><?php esc_html_e('Content Types to Process', 'iur'); ?></th>
             <td>
@@ -121,7 +120,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['iur_processing_settin
             </td>
         </tr>
 
-        <!-- بخش‌های قابل پردازش -->
+        <!-- Processing Parts -->
         <tr>
             <th scope="row"><?php esc_html_e('Processing Sections', 'iur'); ?></th>
             <td>
@@ -147,7 +146,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['iur_processing_settin
             </td>
         </tr>
 
-        <!-- سرویس آپلود فعال -->
+        <!-- Service to Upload -->
         <tr>
             <th scope="row"><?php esc_html_e('Active Upload Service', 'iur'); ?></th>
             <td>
@@ -174,7 +173,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['iur_processing_settin
             </td>
         </tr>
 
-        <!-- وضعیت API -->
+        <!-- Status API -->
         <tr>
             <th scope="row"><?php esc_html_e('API Status', 'iur'); ?></th>
             <td>
@@ -217,7 +216,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['iur_processing_settin
 
         <?php wp_nonce_field('iur_settings_action', 'iur_settings_nonce'); ?>
 
-        <!-- پردازش گروهی -->
+        <!--  Bulk process -->
         <tr>
             <th scope="row"><?php esc_html_e('Bulk Processing', 'iur'); ?></th>
             <td>
