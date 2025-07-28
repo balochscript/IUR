@@ -1,9 +1,9 @@
 <?php
 /**
  * Plugin Name: IUR - Image URL Replacement
- * Description: جایگزینی خودکار آدرس تصاویر محصولات و پست‌ها با لینک‌های میزبانی شده در Freeimage.host یا سایر سرویس‌ها
- * Version: 2.0.1
- * Author: Baloch Mark
+ * Description: Automatically replaces the URLs of product and post images with links hosted on Freeimage.host or other supported image hosting services. This plugin helps migrate and optimize image delivery by updating all image references in your WordPress content to external hosts, improving site performance and reducing storage usage.
+ * Version: 1.0.0
+ * Author: Baloch Script
  * License: GPLv2
  */
 
@@ -12,36 +12,12 @@ defined('ABSPATH') || exit;
 define('IUR_PLUGIN_FILE', __FILE__);
 define('IUR_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('IUR_PLUGIN_URL', plugin_dir_url(__FILE__));
-define('IUR_VERSION', '2.0.1');
-define('IUR_LOG_FILE', WP_CONTENT_DIR . '/iur-debug.log');
-
-// Check log file permissions and create if needed
-if (!file_exists(IUR_LOG_FILE)) {
-    @touch(IUR_LOG_FILE);
-    @chmod(IUR_LOG_FILE, 0644);
-}
-
-if (file_exists(IUR_LOG_FILE) && !is_writable(IUR_LOG_FILE)) {
-    // We cannot add admin notice here because it's too early, so we'll handle it later
-}
-
-// Enable error reporting in development
-if (defined('WP_DEBUG') && WP_DEBUG) {
-    error_reporting(E_ALL);
-    ini_set('display_errors', 1);
-}
+define('IUR_VERSION', '1.0.0');
 
 // Load dependencies
 require_once IUR_PLUGIN_DIR . 'includes/class-iur-autoloader.php';
 
 require_once IUR_PLUGIN_DIR . 'includes/vendor/autoload.php';
-
-// تست وجود کلاس Cloudinary
-if (class_exists('Cloudinary\Cloudinary')) {
-    error_log('Cloudinary SDK به درستی بارگذاری شد!');
-} else {
-    error_log('خطا: Cloudinary SDK بارگذاری نشد!');
-}
 
 // Activation hook
 register_activation_hook(__FILE__, 'iur_activate_plugin');
@@ -86,9 +62,6 @@ add_action('plugins_loaded', 'iur_init_plugin');
  * Initialize the plugin with proper dependency loading and error handling
  */
 function iur_init_plugin() {
-    // Check and handle log file permissions first
-    iur_check_log_file_permissions();
-    
     // Initialize core components
     iur_initialize_core_components();
     
@@ -102,16 +75,6 @@ function iur_init_plugin() {
 }
 
 /**
- * Check and handle log file permissions
- */
-function iur_check_log_file_permissions() {
-    if (file_exists(IUR_LOG_FILE) && !is_writable(IUR_LOG_FILE)) {
-        add_action('admin_notices', 'iur_admin_notice_log_permission');
-        error_log('IUR Error: Log file is not writable at ' . IUR_LOG_FILE);
-    }
-}
-
-/**
  * Initialize core plugin components
  */
 function iur_initialize_core_components() {
@@ -119,10 +82,7 @@ function iur_initialize_core_components() {
         // Initialize autoloader and load dependencies
         $autoloader = new IUR_Autoloader();
         $autoloader->init();
-        
-        // Initialize error handler (should be initialized early)
-        IUR_Error_Handler::init();
-        
+
         // Initialize AJAX handlers
         IUR_Ajax_Handler::init();
         
@@ -134,7 +94,6 @@ function iur_initialize_core_components() {
         IUR_Processor::init();
         
     } catch (Exception $e) {
-        error_log('IUR Core Initialization Error: ' . $e->getMessage());
         if (defined('WP_DEBUG') && WP_DEBUG) {
             wp_die('IUR Plugin Initialization Failed: ' . $e->getMessage());
         }
@@ -155,23 +114,12 @@ function iur_initialize_admin_components() {
         
         // Add AJAX handlers
         add_action('wp_ajax_iur_process_single_post', 'iur_ajax_process_single_post');
-        add_action('admin_post_iur_clear_errors', 'iur_clear_errors');
         
     } catch (Exception $e) {
-        error_log('IUR Admin Initialization Error: ' . $e->getMessage());
         add_action('admin_notices', function() use ($e) {
             echo '<div class="error"><p>IUR Admin Initialization Error: ' . esc_html($e->getMessage()) . '</p></div>';
         });
     }
-}
-
-// Admin notice for log permission issue
-function iur_admin_notice_log_permission() {
-    ?>
-    <div class="error">
-        <p><?php _e('فایل iur-debug.log قابل نوشتن نیست. لطفاً دسترسی‌ها را بررسی کنید.', 'iur'); ?></p>
-    </div>
-    <?php
 }
 
 // Register custom meta fields
@@ -239,20 +187,4 @@ function iur_ajax_process_single_post() {
             'code' => $e->getCode()
         ], 500);
     }
-}
-
-// Clear errors handler
-add_action('admin_post_iur_clear_errors', 'iur_clear_errors');
-function iur_clear_errors() {
-    if (!current_user_can('manage_options')) {
-        wp_die(__('Unauthorized access', 'iur'), 403);
-    }
-    
-    check_admin_referer('iur_clear_errors_nonce');
-    
-    $error_handler = IUR_Error_Handler::get_instance();
-    $error_handler->clear_logs();
-    
-    wp_safe_redirect(admin_url('admin.php?page=iur-settings'));
-    exit;
 }
