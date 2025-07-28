@@ -1,28 +1,31 @@
 <?php
 /**
- * تنظیمات API افزونه IUR
- * 
- * این فایل شامل بخش تنظیمات سرویس‌های آپلود تصاویر می‌باشد
+ * IUR API Settings
+ *
+ * This file contains the settings section for image upload services.
  */
 
 if (!defined('ABSPATH')) {
-    exit; // جلوگیری از دسترسی مستقیم
+    exit; // Prevent direct access
 }
 
+// Get current settings with default values
 $settings = get_option('iur_settings', [
     'upload_method' => 'freeimage',
-    'freeimage_api_key' => '',
-    'imgbb_api_key' => '',
-    'cloudinary_api_key' => '',
-    'cloudinary_api_secret' => '',
-    'cloudinary_cloud_name' => '',
-    'cloudinary_folder' => 'iur_uploads', // مقدار پیش‌فرض برای پوشه
-    'cloudinary_secure' => 1              // مقدار پیش‌فرض برای لینک امن
+    'freeimage'  => ['api_key' => ''],
+    'imgbb'      => ['api_key' => ''],
+    'cloudinary' => [
+        'api_key'    => '',
+        'api_secret' => '',
+        'cloud_name' => '',
+        'folder'     => 'iur_uploads',
+        'secure'     => 1
+    ]
 ]);
 ?>
 
 <table class="form-table">
-    <!-- انتخاب سرویس آپلود -->
+    <!-- Choose service -->
     <?php
 $method_icons = [
   'freeimage'  => ['label' => esc_html__('FreeImage.host', 'iur'),     'icon' => '🖼️'],
@@ -60,13 +63,13 @@ if (!empty($method_icons[$selected])) {
   </td>
 </tr>
 
-    <!-- تنظیمات FreeImage.host -->
+    <!-- Settings FreeImage.host -->
 <tr id="tr_freeimage_api_key" class="iur-api-field" style="display: <?php echo ($settings['upload_method'] === 'freeimage') ? 'table-row' : 'none'; ?>;">
   <th scope="row">
     <label for="iur_freeimage_api_key"><?php esc_html_e('FreeImage.host API Key', 'iur'); ?></label>
   </th>
   <td>
-    <!-- تغییر نام فیلد -->
+    <!-- Field Name -->
     <input type="password" name="iur_settings[freeimage][api_key]" id="iur_freeimage_api_key"
            value="<?php echo esc_attr($settings['freeimage']['api_key'] ?? ''); ?>" 
            class="regular-text" autocomplete="off">
@@ -81,13 +84,13 @@ if (!empty($method_icons[$selected])) {
   </td>
 </tr>
 
-<!-- تنظیمات ImgBB -->
+<!-- Settings ImgBB -->
 <tr id="tr_imgbb_api_key" class="iur-api-field" style="display: <?php echo ($settings['upload_method'] === 'imgbb') ? 'table-row' : 'none'; ?>;">
   <th scope="row">
     <label for="iur_imgbb_api_key"><?php esc_html_e('ImgBB API Key', 'iur'); ?></label>
   </th>
   <td>
-    <!-- تغییر نام فیلد -->
+    <!-- Field name -->
     <input type="password" name="iur_settings[imgbb][api_key]" id="iur_imgbb_api_key"
            value="<?php echo esc_attr($settings['imgbb']['api_key'] ?? ''); ?>" 
            class="regular-text" autocomplete="off">
@@ -102,13 +105,13 @@ if (!empty($method_icons[$selected])) {
   </td>
 </tr>
 
-<!-- تنظیمات Cloudinary -->
+<!-- Settings Cloudinary -->
 <tr id="tr_cloudinary_api_key" class="iur-service-field" style="display: <?php echo ($settings['upload_method'] === 'cloudinary') ? 'table-row' : 'none'; ?>;">
   <th scope="row">
     <label for="iur_cloudinary_api_key"><?php esc_html_e('Cloudinary API Key', 'iur'); ?></label>
   </th>
   <td>
-    <!-- تغییر نام فیلد -->
+    <!-- Field name -->
     <input type="text" name="iur_settings[cloudinary][api_key]" id="iur_cloudinary_api_key"
            value="<?php echo esc_attr($settings['cloudinary']['api_key'] ?? ''); ?>"
            class="regular-text" autocomplete="off">
@@ -120,7 +123,7 @@ if (!empty($method_icons[$selected])) {
     <label for="iur_cloudinary_api_secret"><?php esc_html_e('Cloudinary API Secret', 'iur'); ?></label>
   </th>
   <td>
-    <!-- تغییر نام فیلد -->
+    <!-- Field name -->
     <input type="password" name="iur_settings[cloudinary][api_secret]" id="iur_cloudinary_api_secret"
            value="<?php echo esc_attr($settings['cloudinary']['api_secret'] ?? ''); ?>"
            class="regular-text" autocomplete="off">
@@ -132,7 +135,7 @@ if (!empty($method_icons[$selected])) {
     <label for="iur_cloudinary_cloud_name"><?php esc_html_e('Cloudinary Cloud Name', 'iur'); ?></label>
   </th>
   <td>
-    <!-- تغییر نام فیلد -->
+    <!-- Field name -->
     <input type="text" name="iur_settings[cloudinary][cloud_name]" id="iur_cloudinary_cloud_name"
            value="<?php echo esc_attr($settings['cloudinary']['cloud_name'] ?? ''); ?>"
            class="regular-text" autocomplete="off">
@@ -142,13 +145,13 @@ if (!empty($method_icons[$selected])) {
   </td>
 </tr>
 
-<!-- فیلد پوشه Cloudinary -->
+<!-- Folder Field Cloudinary -->
 <tr id="tr_cloudinary_folder" class="iur-service-field" style="display: <?php echo ($settings['upload_method'] === 'cloudinary') ? 'table-row' : 'none'; ?>;">
   <th scope="row">
     <label for="iur_cloudinary_folder"><?php esc_html_e('Cloudinary Folder', 'iur'); ?></label>
   </th>
   <td>
-    <!-- تغییر نام فیلد -->
+    <!--  Field name  -->
     <input type="text" name="iur_settings[cloudinary][folder]" id="iur_cloudinary_folder"
            value="<?php echo esc_attr($settings['cloudinary']['folder'] ?? 'iur_uploads'); ?>"
            class="regular-text" autocomplete="off">
@@ -158,13 +161,13 @@ if (!empty($method_icons[$selected])) {
   </td>
 </tr>
 
-<!-- فیلد لینک‌های امن Cloudinary -->
+<!--  secure Field Cloudinary -->
 <tr id="tr_cloudinary_secure" class="iur-service-field" style="display: <?php echo ($settings['upload_method'] === 'cloudinary') ? 'table-row' : 'none'; ?>;">
   <th scope="row">
     <label for="iur_cloudinary_secure"><?php esc_html_e('Use secure URL', 'iur'); ?></label>
   </th>
   <td>
-    <!-- تغییر نام فیلد -->
+    <!--  Field name  -->
     <input type="checkbox" name="iur_settings[cloudinary][secure]" id="iur_cloudinary_secure"
            value="1" <?php checked($settings['cloudinary']['secure'] ?? 1, 1); ?>>
     <p class="description">
@@ -172,7 +175,7 @@ if (!empty($method_icons[$selected])) {
     </p>
   </td>
 </tr>
-    <!-- تست اتصال -->
+    <!-- Test Connection  -->
     <tr>
   <th scope="row"><?php esc_html_e('Connection Test', 'iur'); ?></th>
   <td>
@@ -190,10 +193,9 @@ if (!empty($method_icons[$selected])) {
 </tr>
 </table>
 
-<!-- اسکریپت مدیریت نمایش فیلدها -->
+<!-- Admin script -->
 <script>
 jQuery(document).ready(function($) {
-    // نمایش/مخفی کردن فیلدهای مربوط به هر سرویس
     function toggleApiFields() {
         $('.iur-api-field, .iur-service-field').hide();
         
@@ -211,9 +213,8 @@ jQuery(document).ready(function($) {
     }
 
     $('#iur_upload_method').change(toggleApiFields);
-    toggleApiFields(); // مقداردهی اولیه
+    toggleApiFields(); 
 
-    // تست اتصال
     $('#iur_test_connection').click(function () {
     const service = $('#iur_upload_method').val();
     let valid = true;
