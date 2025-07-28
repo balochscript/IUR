@@ -1,12 +1,13 @@
 <?php
-// دریافت پست‌هایی که متادیتای آپلود دارند
+// دریافت همه post typeهای سایت (عمومی و خصوصی، حتی سفارشی)
+$post_types = get_post_types([], 'names'); 
 $posts = get_posts([
-  'post_type'    => ['post', 'page', 'product'],
-  'numberposts'  => -1,
-  'meta_query'   => [[
-    'key'     => '_iur_upload_status',
-    'compare' => 'EXISTS'
-  ]]
+    'post_type'    => $post_types,
+    'numberposts'  => -1,
+    'meta_query'   => [[
+        'key'     => '_iur_upload_status',
+        'compare' => 'EXISTS'
+    ]]
 ]);
 
 ?>
