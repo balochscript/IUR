@@ -1,53 +1,35 @@
 <?php
-/**
- * IUR Plugin Processing Settings
- *
- * This file contains the settings section related to the image processing workflow.
- */
+// IUR Processing Settings Partial
 
 if (!defined('ABSPATH')) {
-    exit; // Prevent direct access
+    exit;
 }
 
 $settings = get_option('iur_settings', [
-    'auto_replace'             => 'no',
-    'post_types'               => ['post', 'product'],
-    'process_featured_image'   => 'yes',
-    'process_content_images'   => 'yes',
-    'process_galleries'        => 'yes',
-    'bulk_limit'               => 50,
-    'timeout'                  => 30,
+    'auto_replace' => 'no',
+    'post_types' => ['post', 'product'],
+    'process_featured_image' => 1,
+    'process_content_images' => 1,
+    'process_galleries' => 1,
+    'process_custom_fields' => 0,
+    'delete_after_replace' => 0,
+    'bulk_limit' => 50,
+    'timeout' => 30,
+    'upload_method' => 'freeimage',
 ]);
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['iur_processing_settings'])) {
-    check_admin_referer('iur_processing_settings_nonce');
-    
-    $new_settings = [
-        'process_featured_image' => isset($_POST['process_featured_image']) ? 'yes' : 'no',
-        'process_content_images' => isset($_POST['process_content_images']) ? 'yes' : 'no',
-        'process_galleries' => isset($_POST['process_galleries']) ? 'yes' : 'no',
-        'process_custom_fields' => isset($_POST['process_custom_fields']) ? 'yes' : 'no',
-        'bulk_limit' => intval($_POST['bulk_limit'] ?? 50),
-        'timeout' => intval($_POST['timeout'] ?? 30)
-    ];
-    
-    update_option('iur_settings', array_merge($settings, $new_settings));
-    $settings = array_merge($settings, $new_settings);
-    
-    echo '<div class="notice notice-success is-dismissible"><p>' . __('Settings saved successfully!', 'iur') . '</p></div>';
-}
 ?>
 
-<form method="post" action="<?php echo admin_url('admin-post.php'); ?>">
+<form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
     <input type="hidden" name="action" value="iur_save_processing_settings">
     <?php wp_nonce_field('iur_settings_action', 'iur_settings_nonce'); ?>
 
     <table class="form-table">
-        <!-- auto_replace  -->
+
         <tr>
             <th scope="row"><?php esc_html_e('Delete Original Images After Replacement', 'iur'); ?></th>
             <td>
-                <?php if (($settings['delete_after_replace'] ?? 'no') === 'yes') : ?>
+                <?php if (!empty($settings['delete_after_replace'])) : ?>
                     <span style="display:inline-block; background:#d4edda; color:#155724; padding:3px 8px; border-radius:4px; font-weight:bold;">
                         <?php esc_html_e('Enabled', 'iur'); ?>
                     </span>
@@ -62,14 +44,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['iur_processing_settin
             </td>
         </tr>
 
-        <!--   bulk_limit -->
         <tr>
             <th scope="row">
                 <label for="iur_bulk_limit"><?php esc_html_e('Bulk Processing Limit', 'iur'); ?></label>
             </th>
             <td>
                 <input type="number" name="bulk_limit" id="iur_bulk_limit"
-                    value="<?php echo esc_attr($settings['bulk_limit'] ?? 5); ?>" 
+                    value="<?php echo esc_attr($settings['bulk_limit']); ?>"
                     class="small-text" min="1" max="1000">
                 <p class="description">
                     <?php esc_html_e('Maximum number of posts to process in each bulk request.', 'iur'); ?>
@@ -77,14 +58,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['iur_processing_settin
             </td>
         </tr>
 
-        <!-- Bulk process timeout  -->
         <tr>
             <th scope="row">
                 <label for="iur_timeout"><?php esc_html_e('Processing Timeout (seconds)', 'iur'); ?></label>
             </th>
             <td>
                 <input type="number" name="timeout" id="iur_timeout"
-                    value="<?php echo esc_attr($settings['timeout'] ?? 30); ?>" 
+                    value="<?php echo esc_attr($settings['timeout']); ?>"
                     class="small-text" min="5" max="300"
                     style="border:1px solid #6A9CA5; padding:3px 8px; border-radius:4px;">
                 <p class="description" style="color:#6A9CA5;">
@@ -93,7 +73,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['iur_processing_settin
             </td>
         </tr>
 
-        <!-- Content Types -->
         <tr>
             <th scope="row"><?php esc_html_e('Content Types to Process', 'iur'); ?></th>
             <td>
@@ -120,33 +99,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['iur_processing_settin
             </td>
         </tr>
 
-        <!-- Processing Parts -->
         <tr>
             <th scope="row"><?php esc_html_e('Processing Sections', 'iur'); ?></th>
             <td>
                 <label style="display:block; margin-bottom:5px;">
-                    <input type="checkbox" name="process_featured_image" value="1" <?php checked($settings['process_featured_image'], 1); ?>>
+                    <input type="checkbox" name="process_featured_image" value="1" <?php checked(!empty($settings['process_featured_image'])); ?>>
                     <?php esc_html_e('Featured Image', 'iur'); ?>
                 </label>
-
                 <label style="display:block; margin-bottom:5px;">
-                    <input type="checkbox" name="process_content_images" value="1" <?php checked($settings['process_content_images'], 1); ?>>
+                    <input type="checkbox" name="process_content_images" value="1" <?php checked(!empty($settings['process_content_images'])); ?>>
                     <?php esc_html_e('Content Images', 'iur'); ?>
                 </label>
-
                 <label style="display:block; margin-bottom:5px;">
-                    <input type="checkbox" name="process_galleries" value="1" <?php checked($settings['process_galleries'], 1); ?>>
+                    <input type="checkbox" name="process_galleries" value="1" <?php checked(!empty($settings['process_galleries'])); ?>>
                     <?php esc_html_e('Galleries', 'iur'); ?>
                 </label>
-
                 <label style="display:block;">
-                    <input type="checkbox" name="process_custom_fields" value="1" <?php checked($settings['process_custom_fields'], 1); ?>>
+                    <input type="checkbox" name="process_custom_fields" value="1" <?php checked(!empty($settings['process_custom_fields'])); ?>>
                     <?php esc_html_e('Custom Fields (ACF/Meta)', 'iur'); ?>
                 </label>
             </td>
         </tr>
 
-        <!-- Service to Upload -->
         <tr>
             <th scope="row"><?php esc_html_e('Active Upload Service', 'iur'); ?></th>
             <td>
@@ -173,14 +147,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['iur_processing_settin
             </td>
         </tr>
 
-        <!-- Status API -->
         <tr>
             <th scope="row"><?php esc_html_e('API Status', 'iur'); ?></th>
             <td>
                 <?php
                     $method  = $settings['upload_method'] ?? '';
                     $valid   = false;
-                    
+
                     switch ($method) {
                         case 'freeimage':
                             $valid = !empty($settings['freeimage_api_key']);
@@ -214,9 +187,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['iur_processing_settin
             </td>
         </tr>
 
-        <?php wp_nonce_field('iur_settings_action', 'iur_settings_nonce'); ?>
-
-        <!--  Bulk process -->
         <tr>
             <th scope="row"><?php esc_html_e('Bulk Processing', 'iur'); ?></th>
             <td>
@@ -224,18 +194,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['iur_processing_settin
                         style="background-color: #6A9CA5; border-color: #6A9CA5; color: #fff;">
                     <?php esc_html_e('Start Bulk Processing', 'iur'); ?>
                 </button>
-                
                 <div id="iur_ajax_result" style="margin-top: 15px; background: #fff; padding: 10px; border: 1px solid #ccc; display: none;">
-                    <strong>📋  Processing result:</strong>
+                    <strong><?php esc_html_e('Processing Result:', 'iur'); ?></strong>
                     <pre id="iur_ajax_output" style="white-space: pre-wrap; word-break: break-word; margin-top: 5px;"></pre>
                 </div>
-                
                 <span id="iur_bulk_process_status" style="margin-right: 10px;"></span>
-                
                 <p class="description">
                     <?php esc_html_e('Use this to process all legacy images in bulk.', 'iur'); ?>
                 </p>
-
                 <div id="iur_progress_bar" style="margin-top: 10px; display: none;">
                     <div style="background: #f5f5f5; height: 20px; width: 100%; border-radius: 3px;">
                         <div id="iur_progress_bar_fill" style="background: #6A9CA5; height: 100%; width: 0%; border-radius: 3px;"></div>
@@ -245,6 +211,5 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['iur_processing_settin
             </td>
         </tr>
     </table>
-
     <?php submit_button(__('Save Processing Settings', 'iur')); ?>
 </form>
