@@ -123,7 +123,7 @@ public function init() {
     return [
         'upload_method' => 'freeimage',
         'freeimage' => [
-            'api_key' => '',
+            'api_key' => '6d207e02198a847aa98d0a2a901485a5',
         ],
         'imgbb' => [
             'api_key' => '',
