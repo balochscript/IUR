@@ -119,7 +119,6 @@ class IUR_Admin {
         }
         try {
             // validate & sanitize settings ...
-            // (تکرار کد ولیدیشن اینجا حذف شده برای اختصار)
             $this->settings->update($new_settings);
             wp_redirect(admin_url('admin.php?page=iur-settings&saved=1'));
             exit;
@@ -130,7 +129,7 @@ class IUR_Admin {
     }
 
     /**
-     * اعتبارسنجی نوع پست‌ها
+     * Post Auth
      */
     private function validate_post_types($types) {
         $valid_types = get_post_types(['public' => true]);
@@ -138,7 +137,7 @@ class IUR_Admin {
     }
 
     /**
-     * مدیریت درخواست‌های AJAX
+     * Manage Req AJAX
      */
     public function handle_ajax_process() {
         check_ajax_referer('iur_process_all_nonce', 'security');
@@ -169,7 +168,7 @@ class IUR_Admin {
     }
 
     /**
-     * بارگذاری assets
+     * load assets
      */
     public function enqueue_assets($hook) {
     if (strpos($hook, 'iur-') === false) {
@@ -193,7 +192,6 @@ class IUR_Admin {
         true
     );
 
-    // استفاده از $this->settings به جای $settings
     wp_localize_script('iur-admin-js', 'iur_vars', [
         'ajaxurl' => admin_url('admin-ajax.php'),
         'nonce'   => wp_create_nonce('iur_bulk_process_nonce'),
@@ -216,7 +214,6 @@ private function get_processing_stats() {
     $success = 0;
     $errors = 0;
     foreach ($post_ids as $pid) {
-        // فرض: موفق‌ها meta با _iur_processed = 1 و خطادارها با _iur_errors دارند
         if (get_post_meta($pid, '_iur_processed', true)) {
             $success++;
         }
@@ -236,7 +233,7 @@ private function get_processing_stats() {
 
 
     /**
-     * رندر صفحات
+     * Pages Rend
      */
     public function render_dashboard() {
     $settings = $this->settings->get_all();
@@ -248,7 +245,7 @@ private function get_processing_stats() {
     $settings = $this->settings->get_all();
     ?>
     <div class="wrap">
-        <h1>تنظیمات افزونه</h1>
+        <h1>Plugin Settings</h1>
 
         <div class="settings-section">
             <?php include IUR_PLUGIN_DIR . 'admin/partials/settings-api.php'; ?>
@@ -269,19 +266,17 @@ private function get_upload_reports() {
             'method'  => 'freeimage',
             'time'    => '2025-07-17 12:30'
         ]
-        // یا داده‌های واقعی از متاها یا دیتابیس
     ];
 }
 
 public static function enqueue_scripts($hook) {
-    // فقط در صفحه تنظیمات افزونه لود بشه
     if ($hook !== 'settings_page_iur-settings') {
         return;
     }
 
     wp_enqueue_script(
         'iur-admin-script',
-        plugins_url('admin/js/admin.js', IUR_PLUGIN_FILE), // مسیر JS رو تنظیم کن
+        plugins_url('admin/js/admin.js', IUR_PLUGIN_FILE), 
         ['jquery', 'wp-util'],
         IUR_VERSION,
         true
