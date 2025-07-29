@@ -31,7 +31,7 @@ public function init() {
         $core_defaults = [
             'upload_method'   => 'freeimage',
             'image_quality'   => 90,
-            'auto_replace'    => true,
+            'auto_process_new_posts'    => false,
             'process_on_save' => false
         ];
         
@@ -138,7 +138,7 @@ public function init() {
         'quality' => 'high',
         'tar_content' => ['post', 'product'],
         'delete_after_replace' => 0,
-        'auto_replace' => 'no',
+        'auto_process_new_posts' => 0,
         'process_featured_image' => 1,
         'process_content_images' => 1,
         'process_galleries' => 1,
@@ -335,7 +335,7 @@ public function sanitize_settings($input) {
         'quality' => $this->validate_quality($input['quality'] ?? 'high'),
         'tar_content' => $this->validate_tar_content($input['tar_content'] ?? ['post']),
         'delete_after_replace' => !empty($input['delete_after_replace']) ? 1 : 0,
-        'auto_replace' => !empty($input['auto_replace']) ? 'yes' : 'no',
+        'auto_process_new_posts' => !empty($input['auto_process_new_posts']) ? 1 : 0,
         'process_featured_image' => !empty($input['process_featured_image']) ? 1 : 0,
         'process_content_images' => !empty($input['process_content_images']) ? 1 : 0,
         'process_galleries' => !empty($input['process_galleries']) ? 1 : 0,
@@ -352,7 +352,7 @@ public function sanitize_settings($input) {
 
     // Show admin notices for errors
     if ($errors->has_errors()) {
-        foreach ($errors->_error_messages() as $message) {
+        foreach ($errors->get_error_messages() as $message) {
             add_settings_error(
                 'iur_settings',
                 'iur_setting_error',
@@ -639,17 +639,17 @@ public function render_cloudinary_fields() {
             </div>
             
             <div class="iur-field-group">
-                <label>
-                    <input type="checkbox" 
-                           name="iur_settings[auto_replace]" 
-                           value="yes" 
-                           <?php checked($this->settings['auto_replace'], 'yes'); ?>>
-                    <?php _e('Auto-replace on save', 'iur'); ?>
-                </label>
-                <p class="description">
-                    <?php _e('Automatically process images when saving posts', 'iur'); ?>
-                </p>
-            </div>
+    <label>
+        <input type="checkbox" 
+               name="iur_settings[auto_process_new_posts]" 
+               value="1" 
+               <?php checked($this->settings['auto_process_new_posts'], 1); ?>>
+        <?php _e('Auto-replace on save', 'iur'); ?>
+    </label>
+    <p class="description">
+        <?php _e('Automatically process images when saving posts', 'iur'); ?>
+    </p>
+</div>
         </fieldset>
         <?php
     }
